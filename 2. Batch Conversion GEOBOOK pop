@@ -1,0 +1,111 @@
+library(rgdal)
+library(rgeos)
+library(maptools)
+library(ggplot2)
+library(raster)
+library(ncdf4)
+
+# import Shapefile driver
+ogrDrivers()[10,]
+
+# makes list of shape files
+ file_root=("C:\\Users\\WCS\\Documents\\Geobooks - 2010\\")
+ file_list=list.files("C:\\Users\\WCS\\Documents\\Geobooks - 2010")
+ layername =paste(file_root,file_list,"\\Data", sep="")
+
+# suffix and zone
+presuffix <- c("NSL","CEN","SIM","ENB","EHY","ENG","ESK","GUL","MAD","MAN","MIL","MOR","NIR","ORO","SHY","WSK","WES","WHY","WNB")
+zone <-       c(56,    55,   55,   56,    55,  55,  55,   55,    55,   55,   56,   55,  56,   55,   55,   54, 54,     55,    55)
+
+# Three Letter Acronoym <- CHANGE ME
+TLA <- "pop"
+
+# checks
+lapply(layername, ogrListLayers)
+
+# referencing
+census <- c(6,8,18,4,2,4,9,4,2,24,2,2,21,4,3,3,5,5,3)
+logging <- c(8,25,20,6,NA,8,10,6,3,3,3,3,7,5,4,4,6,6,7)
+roads <- c(14,4,21,5,5,12,11,10,6,20,20,21,13,2,7,5,9,1,10)
+mining <- c(23,2,6,8,4,10,11,8,5,5,16,5,10,7,6,12,7,8,9)
+rivers <- c(3,18,14,24,20,22,23,23,19,19,13,20,12,21,23,22,23,24,25)
+WMA <- c(NA,22,8,9,6,NA,1,12,7,6,5,6,NA,NA,9,NA,10,10,11)
+boundary <- c(20,9,13,19,19,21,17,5,13,12,17,12,22,12,22,7,1,23,5) # = POP
+
+
+# string cleansing (removes NA) <- CHANGE ME
+ProvId <- data.frame(presuffix,boundary, zone, layername)
+ProvId
+ProvId <- na.omit(ProvId)
+ProvId
+
+presuffix <-ProvId$presuffix 
+layername <-as.character(ProvId$layername)
+zone <- ProvId$zone
+boundary<-ProvId$boundary
+
+
+
+
+
+############### MASKING ############################
+
+## Function plus small loop
+
+RasterGeobook<- function (path,layer, UTMzone){
+prov <-readOGR(path, layer=layer)
+data <- paste("@data$DENSITY",sep="")
+
+# assign UTM projection to map grid
+crs <- paste("+proj=utm +zone=",UTMzone," +south", sep="")
+prov@proj4string<- CRS(crs)
+
+# transform CRS to UTM equal area
+prov <-spTransform(prov, CRS(crs))
+
+# Raster template (100 m spatial resolution) # makes it per ha
+Index.file <- paste("C:\\Users\\WCS\\Documents\\UNREDD\\Layers\\",presuffix[i],"_Index.txt", sep="")
+
+load(Index.file)
+Index
+r<- raster(extent(Index@extent))
+projection(r) <- Index@proj
+res(r) <- 100
+
+# rasterize 
+rp <- rasterize(prov, r, prov@data$DENSITY)
+
+	
+# write raster using paste and substring
+	folder= "C:/Users/WCS/Documents/UNREDD/Layers/"
+	newname = paste(folder,presuffix[i],"_", TLA,".grd",sep="")
+	writeRaster(rp,newname, overwrite=TRUE)
+}
+
+
+# run function as loop
+for(i in 1:length(boundary)){
+RasterGeobook(layername[i],ogrListLayers(layername[i])[boundary [i]],zone[i])
+}
+
+
+############### DATA ############################
+
+# get list of raster names from within folder
+mypath <- "C:/Users/WCS/Documents/UNREDD/Layers/"
+
+pattern=paste("_pop.grd", sep="")
+
+rasterfiles <-list.files(path=mypath, pattern=pattern)
+rasterlist <- paste(mypath,rasterfiles, sep="")
+
+# make list of radiation
+input.rasters <-lapply(rasterlist, raster)
+
+# check individual plots
+rasterPLOT <-do.call(plot,input.rasters[16])
+
+# plot
+plot(rasterPLOT )
+
+
