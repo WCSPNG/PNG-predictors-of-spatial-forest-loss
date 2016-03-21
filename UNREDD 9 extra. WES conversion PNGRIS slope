@@ -1,0 +1,154 @@
+library(rgdal)
+library(ggplot2)
+library(raster)
+library(maptools)
+library(sp)
+
+rm(list=ls())
+
+# import MAPinfo
+ogrDrivers()[23,]
+
+# makes list of shape files
+ file_root="C:\\Users\\WCS\\Documents\\PNGRIS\\WES\\slope"
+ file_list=list.files("C:\\Users\\WCS\\Documents\\PNGRIS\\WES\\slope")
+ layername =paste(file_root,file_list, sep="")
+
+
+
+# checks
+ogrListLayers("C:\\Users\\WCS\\Documents\\PNGRIS\\WES\\slope")
+
+# suffix and zone
+presuffix <- c( "CEN" ,"EHY" ,"ENB" ,"ENG" ,"ESK" ,"GUL" ,"MAD" ,"MAN", "MIL" ,"MOR" ,"NIR" ,"NSL" ,"ORO", "SHY", "SIM", "WES", "WHY", "WNB" ,"WSK")
+zone <-       c( 55,    55,     56,    54,    54  ,   55,    55,    55,    56,    55,    56,   56,    55,   54,      55,    54,    55,    55,    54)
+
+
+
+# tester
+a <-readOGR(file_root, layer="slope_wes_1")
+b <-readOGR(file_root, layer="slope_wes_2")
+c <-readOGR(file_root, layer="slope_wes_3")
+d <-readOGR(file_root, layer="slope_wes_4")
+e <-readOGR(file_root, layer="slope_wes_5")
+f <-readOGR(file_root, layer="slope_wes_6")
+g <-readOGR(file_root, layer="slope_wes_7")
+h <-readOGR(file_root, layer="slope_wes_8")
+i <-readOGR(file_root, layer="slope_wes_9")
+j <-readOGR(file_root, layer="slope_wes_10")
+k <-readOGR(file_root, layer="slope_wes_11")
+l <-readOGR(file_root, layer="slope_wes_12")
+m <-readOGR(file_root, layer="slope_wes_13")
+n <-readOGR(file_root, layer="slope_wes_14")
+o <-readOGR(file_root, layer="slope_wes_15")
+p <-readOGR(file_root, layer="slope_wes_16")
+q <-readOGR(file_root, layer="slope_wes_17")
+rr <-readOGR(file_root, layer="slope_wes_18")
+s <-readOGR(file_root, layer="slope_wes_19")
+t <-readOGR(file_root, layer="slope_wes_20")
+u <-readOGR(file_root, layer="slope_wes_21")
+v <-readOGR(file_root, layer="slope_wes_22")
+w <-readOGR(file_root, layer="slope_wes_23")
+x <-readOGR(file_root, layer="slope_wes_24")
+y<-readOGR(file_root, layer="slope_wes_25")
+
+
+
+# assign UTM projection to map grid
+crs <- paste("+proj=utm +zone=",54," +south", sep="")
+
+
+# transform CRS to UTM equal area
+a <-spTransform(a, CRS(crs)) 
+b <-spTransform(b, CRS(crs)) 
+c <-spTransform(c, CRS(crs)) 
+d <-spTransform(d, CRS(crs)) 
+e <-spTransform(e, CRS(crs)) 
+f <-spTransform(f, CRS(crs)) 
+g <-spTransform(g, CRS(crs)) 
+h <-spTransform(h, CRS(crs)) 
+i <-spTransform(i, CRS(crs)) 
+j <-spTransform(j, CRS(crs)) 
+k <-spTransform(k, CRS(crs)) 
+l <-spTransform(l, CRS(crs)) 
+m <-spTransform(m, CRS(crs)) 
+n <-spTransform(n, CRS(crs)) 
+o <-spTransform(o, CRS(crs)) 
+p <-spTransform(p, CRS(crs)) 
+q <-spTransform(q, CRS(crs)) 
+rr <-spTransform(rr, CRS(crs)) 
+s <-spTransform(s, CRS(crs)) 
+t <-spTransform(t, CRS(crs)) 
+u <-spTransform(u, CRS(crs)) 
+v <-spTransform(v, CRS(crs)) 
+w <-spTransform(w, CRS(crs)) 
+x <-spTransform(x, CRS(crs)) 
+y <-spTransform(y, CRS(crs)) 
+
+
+
+
+
+# Raster template (100 m spatial resolution) # makes it per ha
+Index.file <- paste("C:\\Users\\WCS\\Documents\\UNREDD\\Layers\\","WES_Index.txt", sep="")
+
+load(Index.file)
+Index
+r<- raster(extent(Index@extent))
+projection(r) <- Index@proj
+res(r) <- 1000
+r
+
+
+# create raster
+	a <- raster:::.polygonsToRaster(a, r, field=a@data$Slope)
+	b <- raster:::.polygonsToRaster(b, r, field=b@data$Slope)
+	c <- raster:::.polygonsToRaster(c, r, field=c@data$Slope)
+	d <- raster:::.polygonsToRaster(d, r, field=d@data$Slope)
+	e <- raster:::.polygonsToRaster(e, r, field=e@data$Slope)
+	f <- raster:::.polygonsToRaster(f, r, field=f@data$Slope)
+	g <- raster:::.polygonsToRaster(g, r, field=g@data$Slope)
+	h <- raster:::.polygonsToRaster(h, r, field=h@data$Slope)
+	i <- raster:::.polygonsToRaster(i, r, field=i@data$Slope)
+	j <- raster:::.polygonsToRaster(j, r, field=j@data$Slope)
+	k <- raster:::.polygonsToRaster(k, r, field=k@data$Slope)
+	l <- raster:::.polygonsToRaster(l, r, field=l@data$Slope)
+
+
+m <- raster:::.polygonsToRaster(m, r, field=m@data$Slope)
+n <- raster:::.polygonsToRaster(n, r, field=n@data$Slope)
+o <- raster:::.polygonsToRaster(o, r, field=o@data$Slope)
+p <- raster:::.polygonsToRaster(p, r, field=p@data$Slope)
+q <- raster:::.polygonsToRaster(q, r, field=q@data$Slope)
+rr <- raster:::.polygonsToRaster(rr, r, field=rr@data$Slope)
+s <- raster:::.polygonsToRaster(s, r, field=s@data$Slope)
+t <- raster:::.polygonsToRaster(t, r, field=t@data$Slope)
+u <- raster:::.polygonsToRaster(u, r, field=u@data$Slope)
+v <- raster:::.polygonsToRaster(v, r, field=v@data$Slope)
+w <- raster:::.polygonsToRaster(w, r, field=w@data$Slope)
+x <- raster:::.polygonsToRaster(x, r, field=x@data$Slope)
+y <- raster:::.polygonsToRaster(y, r, field=y@data$Slope)
+
+
+WESslope <- merge(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,rr,s,t,u,v,w,x,y)  # missing one corner
+plot(WESslope)
+
+
+
+# change resolution
+Index.file <- paste("C:\\Users\\WCS\\Documents\\UNREDD\\Layers\\","WES_Index.txt", sep="")
+
+load(Index.file)
+Index
+r<- raster(extent(Index@extent))
+projection(r) <- Index@proj
+res(r) <- 100
+
+# reproject back to UTM
+projection = paste("+proj=utm +",54," +south", sep="")
+WEScomp <- projectRaster(from=WESslope,to=r, crs= projection)
+
+# check 
+plot(WEScomp)
+writeRaster(WEScomp,"C:/Users/WCS/Documents/UNREDD/Layers/WES_slo.grd", overwrite=TRUE)
+
