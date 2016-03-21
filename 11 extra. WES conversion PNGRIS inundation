@@ -1,0 +1,146 @@
+library(rgdal)
+library(ggplot2)
+library(raster)
+library(maptools)
+library(sp)
+
+rm(list=ls())
+
+# import MAPinfo
+ogrDrivers()[23,]
+
+# makes list of shape files
+ file_root="C:\\Users\\WCS\\Documents\\PNGRIS\\WES\\inundation"
+ file_list=list.files("C:\\Users\\WCS\\Documents\\PNGRIS\\WES\\inundation")
+ layername =paste(file_root,file_list, sep="")
+
+
+
+# checks
+ogrListLayers("C:\\Users\\WCS\\Documents\\PNGRIS\\WES\\inundation")
+lapply(layername, ogrListLayers)
+
+# suffix and zone
+presuffix <- c( "CEN" ,"EHY" ,"ENB" ,"ENG" ,"ESK" ,"GUL" ,"MAD" ,"MAN", "MIL" ,"MOR" ,"NIR" ,"NSL" ,"ORO", "SHY", "SIM", "WES", "WHY", "WNB" ,"WSK")
+zone <-       c( 55,    55,     56,    54,    54  ,   55,    55,    55,    56,    55,    56,   56,    55,   54,      55,    54,    55,    55,    54)
+
+# PNGRIS suffixes
+suffix = paste("inundation_",tolower(file_list), sep="")
+suffix[8] = "inundation_manus"
+suffix[9] = "inundation_milne"
+
+# tester
+a <-readOGR(file_root, layer="inundation_1_wes")
+b <-readOGR(file_root, layer="inundation_2_wes")
+c <-readOGR(file_root, layer="inundation_3_wes")
+d <-readOGR(file_root, layer="inundation_4_wes")
+e <-readOGR(file_root, layer="inundation_5_wes")
+f <-readOGR(file_root, layer="inundation_6_wes")
+g <-readOGR(file_root, layer="inundation_7_wes")
+h <-readOGR(file_root, layer="inundation_8_wes")
+i <-readOGR(file_root, layer="inundation_9_wes")
+j <-readOGR(file_root, layer="inundation_10_wes")
+k <-readOGR(file_root, layer="inundation_11_wes")
+l <-readOGR(file_root, layer="inundation_12_wes")
+m <-readOGR(file_root, layer="inundation_13_wes")
+
+
+plot(k)
+plot(b, add=TRUE)
+plot(c, add=TRUE, col="yellow")
+plot(d, add=TRUE, col="blue")
+plot(e, add=TRUE, col="red")
+plot(f, add=TRUE, col="yellow")
+plot(g, add=TRUE, col="black")
+plot(h, add=TRUE, col="green")
+plot(i, add=TRUE, col="yellow")
+plot(i, add=TRUE, col="red")
+plot(j, add=TRUE, col="blue")
+plot(k, add=TRUE, col="yellow")
+plot(l, add=TRUE, col="green")
+
+
+###########################
+# building loop -> writing to file 
+
+
+a <-readOGR(file_root, layer="inundation_1_wes")
+b <-readOGR(file_root, layer="inundation_2_wes")
+c <-readOGR(file_root, layer="inundation_3_wes")
+d <-readOGR(file_root, layer="inundation_4_wes")
+e <-readOGR(file_root, layer="inundation_5_wes")
+f <-readOGR(file_root, layer="inundation_6_wes")
+g <-readOGR(file_root, layer="inundation_7_wes")
+h <-readOGR(file_root, layer="inundation_8_wes")
+i <-readOGR(file_root, layer="inundation_9_wes")
+j <-readOGR(file_root, layer="inundation_10_wes")
+k <-readOGR(file_root, layer="inundation_11_wes")
+l <-readOGR(file_root, layer="inundation_12_wes")
+
+# assign UTM projection to map grid
+crs <- paste("+proj=utm +zone=",54," +south", sep="")
+
+
+# transform CRS to UTM equal area
+a <-spTransform(a, CRS(crs)) 
+b <-spTransform(b, CRS(crs)) 
+c <-spTransform(c, CRS(crs)) 
+d <-spTransform(d, CRS(crs)) 
+e <-spTransform(e, CRS(crs)) 
+f <-spTransform(f, CRS(crs)) 
+g <-spTransform(g, CRS(crs)) 
+h <-spTransform(h, CRS(crs)) 
+i <-spTransform(i, CRS(crs)) 
+j <-spTransform(j, CRS(crs)) 
+k <-spTransform(k, CRS(crs)) 
+l <-spTransform(l, CRS(crs)) 
+
+
+
+# Raster template (100 m spatial resolution) # makes it per ha
+Index.file <- paste("C:\\Users\\WCS\\Documents\\UNREDD\\Layers\\","WES_Index.txt", sep="")
+
+load(Index.file)
+Index
+r<- raster(extent(Index@extent))
+projection(r) <- Index@proj
+res(r) <- 1000
+
+
+
+# create raster
+	a <- raster:::.polygonsToRaster(a, r, field=a@data$Inundation)
+	b <- raster:::.polygonsToRaster(b, r, field=b@data$Inundation)
+	c <- raster:::.polygonsToRaster(c, r, field=c@data$Inundation)
+	d <- raster:::.polygonsToRaster(d, r, field=d@data$Inundation)
+	e <- raster:::.polygonsToRaster(e, r, field=e@data$Inundation)
+	f <- raster:::.polygonsToRaster(f, r, field=f@data$Inundation)
+	g <- raster:::.polygonsToRaster(g, r, field=g@data$Inundation)
+	h <- raster:::.polygonsToRaster(h, r, field=h@data$Inundation)
+	i <- raster:::.polygonsToRaster(i, r, field=i@data$Inundation)
+	j <- raster:::.polygonsToRaster(j, r, field=j@data$Inundation)
+	k <- raster:::.polygonsToRaster(k, r, field=k@data$Inundation)
+	l <- raster:::.polygonsToRaster(l, r, field=l@data$INUNDATION)
+
+
+
+WEScomp <- merge(a,b,c,d,e,f,g,h,i,j,k,l)  # missing one corner
+
+# change resolution
+Index.file <- paste("C:\\Users\\WCS\\Documents\\UNREDD\\Layers\\","WES_Index.txt", sep="")
+load(Index.file)
+Index
+r<- raster(extent(Index@extent))
+projection(r) <- Index@proj
+res(r) <- 100
+r
+
+# reproject back to UTM
+projection = paste("+proj=utm +",54," +south", sep="")
+WEScomp <- projectRaster(from=WEScomp,to=r, crs= projection)
+
+# check  - missing one corner due to missing MapINFO in PNGRIS
+plot(WEScomp)
+writeRaster(WEScomp,"C:/Users/WCS/Documents/UNREDD/Layers/WES_inu.grd", overwrite=TRUE)
+
+
