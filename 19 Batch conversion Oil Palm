@@ -1,0 +1,87 @@
+library(rgdal)
+library(ggplot2)
+library(raster)
+library(maptools)
+library(sp)
+library(ncdf4)
+
+rm(list=ls())
+
+# import MAPinfo
+ogrDrivers()[23,]
+
+# makes list of shape files
+ file_root="C:\\Users\\WCS\\Documents\\UNREDD\\NBPOL shape files 2014-15"
+
+ogrListLayers(file_root)
+
+# presuffix
+presuffix <- c("CEN","SIM","ENB","ESK","EHY","ENG","GUL","MAD","MAN","MIL","MOR","NIR","NSL","ORO","WSK","SHY","WNB","WHY","WES")
+
+# reader
+estate <-readOGR(file_root, layer =ogrListLayers(file_root)[1])
+lease  <-readOGR(file_root, layer =ogrListLayers(file_root)[2])
+
+# test plotter
+plot(a, col="green")
+plot(b, add=TRUE, col ="red")
+
+
+###########################
+
+Oil <- function (prov){
+prov = prov
+
+
+# reading in singular layer for province
+aoi<- readOGR("C:\\Users\\WCS\\Documents\\UNREDD\\PNG Adm", "PNG_adm1")
+aoi$NAME_1 <- c("CEN","SIM","ENB","ESK","EHY","ENG","GUL","MAD","MAN","MIL","MOR","NIR","NSL","ORO","WSK","SHY","WNB","WHY","WES")
+
+# Raster template (100 m spatial resolution) # makes it per ha
+
+Index.file <- paste("C:\\Users\\WCS\\Documents\\UNREDD\\Layers\\",presuffix[i],"_Index.txt", sep="")
+load(Index.file)
+r<- raster(extent(Index@extent))
+projection(r) <- Index@proj
+res(r) <- 100
+
+# three letter acronym
+TLA = "Oil"
+
+
+# select province
+aoi <- aoi[aoi$NAME_1  == prov,]
+
+plot(aoi)
+
+
+# assign UTM projection to map grid
+crs <-  projection(r)
+
+
+# transform CRS to UTM equal area
+aoi <-spTransform(aoi, CRS(crs))
+estate <-spTransform(estate, CRS(crs)) 
+lease <-spTransform(lease, CRS(crs)) 
+ 
+estate <- rasterize(estate,r)
+lease  <- rasterize (lease,r)
+
+
+oil <- estate+lease
+
+plot(oil)
+
+
+# write raster using paste and substring
+	folder= "C:/Users/WCS/Documents/UNREDD/Layers/"
+	OILname = paste(folder,presuffix[i],"_", TLA,".grd",sep="")
+      writeRaster(oil,OILname, overwrite=TRUE)
+}
+
+############# EXECUTION ################
+
+# run function as loop
+for(i in 1:19){
+	Oil(prov=presuffix[i]) # <-CHANGE ME
+}
