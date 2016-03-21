@@ -1,0 +1,105 @@
+library(rgdal)
+library(rgeos)
+library(maptools)
+library(ggplot2)
+library(raster)
+library(ncdf4)
+
+# clear all memory
+rm(list = ls()) 
+
+# import Shapefile driver
+ogrDrivers()[10,]
+
+# reading in singular layer for province
+X <- readOGR("C:\\Users\\WCS\\Documents\\UNREDD\\PNG Adm", "PNG_adm1")
+str(X,3)
+
+# renaming provinces
+X$NAME_1 <- c("CEN","SIM","ENB","ESK","EHY","ENG","GUL","MAD","MAN","MIL","MOR","NIR","NSL","ORO","WSK","SHY","WNB","WHY","WES")
+provNames<- c("CEN","SIM","ENB","ESK","EHY","ENG","GUL","MAD","MAN","MIL","MOR","NIR","NSL","ORO","WSK","SHY","WNB","WHY","WES")
+presuffix <- provNames
+
+
+# Three Letter Acronoym <- CHANGE ME
+TLA <- "msk"   # "msk" = mask
+
+# UTM Zones
+zone <- c   (  55,   55,   56,   55,    55,  55,   55,   55,    55,   56,   55,   56,  56,   55,   54,   55,   55,     55,    54)
+
+
+##### MASKING FUNCTION ################
+
+UTM.raster.size<- function (prov,UTMzone,res){
+prov = prov
+UTMzone = UTMzone
+res = res
+
+# select province
+X <- X[X$NAME_1  == prov, ]
+
+# CRS
+crs <- paste("+proj=utm +zone=",UTMzone," +south", sep="")
+
+ # use UTM
+shape<-spTransform(X, CRS(crs))
+plot(shape)
+
+# utm raster
+ext<-extent(shape)
+col <- ext[2]-ext[1]
+row <- ext[4]-ext[3]
+r <- raster (ncol=col, nrow=row, crs=crs)
+extent(r) <- extent(shape)
+res(r) <- res
+
+# rasterize
+rast<- rasterize(shape, r)
+
+# plot
+plot(rast)
+
+# write raster using paste and substring
+	folder= "C:/Users/WCS/Documents/UNREDD/Layers/"
+	newname = paste(folder,presuffix[i],"_", TLA,".grd",sep="")
+	writeRaster(rast,newname, overwrite=TRUE)
+print(r)
+
+# S4 SUBROUTINE
+
+# make Index file
+# S4 object
+setClass("Province.Index",slots=list(province="character",ncols="numeric",nrows="numeric",proj="character",extent = "Extent"))
+Index <- new("Province.Index",province=prov, ncols=r@ncols, nrows=r@nrows, extent=r@extent, proj =r@crs@projargs)
+
+# save S4 as ASCII
+save(Index, ascii=TRUE, file=paste(folder,presuffix[i],"_Index.txt", sep=""))
+
+}
+
+############# EXECUTION ################
+
+# run function as loop
+for(i in 1:length(provNames)){
+UTM.raster.size(prov=provNames[i],UTMzone=zone[i], res=100) # <-CHANGE ME
+}
+
+############# RELOADING ################
+
+# load in example #
+
+setwd("C:\\Users\\WCS\\Documents")
+load("C:\\Users\\WCS\\Documents\\UNREDD\\Layers\\CEN_Index.txt") # call is "Index"
+Index
+
+setwd("C:\\Users\\WCS\\Documents")
+load("C:\\Users\\WCS\\Documents\\UNREDD\\Layers\\WES_Index.txt") # call is "Index"
+Index
+
+############# EXTRACTION ################
+
+Index@province
+Index@ncols
+Index@nrows
+Index@proj
+Index@extent
