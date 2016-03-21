@@ -1,0 +1,94 @@
+library(gfcanalysis)
+library(raster)
+library(rgdal)
+library(rgeos)
+library(geosphere)
+library(sp)
+
+ogrDrivers()
+
+rm(list=ls())
+
+###########################
+
+
+
+
+Hansen<- function (prov){
+prov = prov
+
+# reading in singular layer for province
+aoi<- readOGR("C:\\Users\\WCS\\Documents\\UNREDD\\PNG Adm", "PNG_adm1")
+aoi$NAME_1 <- c("CEN","SIM","ENB","ESK","EHY","ENG","GUL","MAD","MAN","MIL","MOR","NIR","NSL","ORO","WSK","SHY","WNB","WHY","WES")
+presuffix <- c("CEN","SIM","ENB","ESK","EHY","ENG","GUL","MAD","MAN","MIL","MOR","NIR","NSL","ORO","WSK","SHY","WNB","WHY","WES")
+
+# renaming provinces
+
+# three letter acronym
+TLA = "tre"
+SLA = "los"
+
+# select province
+aoi <- aoi[aoi$NAME_1  == prov,]
+
+# check title and aoi overlay
+tiles <- calc_gfc_tiles(aoi)
+plot(tiles)
+plot(aoi, add=TRUE, lty=2, col="#00ff0050")
+
+# stipulate forest threshold
+
+output_folder <- "C:\\Users\\WCS\\Documents\\UNREDD\\Hansen 2015" 
+gfc_extract <- extract_gfc(aoi, output_folder, filename=paste(presuffix[i],"_los.tif",sep=""), overwrite=TRUE)
+
+# Assigning new values
+Forest.prov <- unstack(gfc_extract)
+Forest.prov[[1]] -> tree
+Forest.prov[[4]] -> loss
+Forest.prov[[5]] -> dmask
+
+loss[loss >=1] <- 1
+
+
+
+
+# Raster template (100 m spatial resolution) # makes it per ha
+
+Index.file <- paste("C:\\Users\\WCS\\Documents\\UNREDD\\Layers\\",presuffix[i],"_Index.txt", sep="")
+load(Index.file)
+r<- raster(extent(Index@extent))
+projection(r) <- Index@proj
+res(r) <- 100
+
+
+tree <- projectRaster(from=tree, to=r, 100, crs=projection(r), method="bilinear")
+loss <- projectRaster(from=loss, to=r, 100, crs=projection(r), method="bilinear")
+tree[tree <= 70] <- NA
+tree[tree >= 70] <- 1
+loss[loss >=0.05] <- 1
+loss[loss <=0.05]  <- 0
+
+check <- mask(loss,tree)
+plot(tree)
+
+plot(check)
+
+# write raster using paste and substring
+	folder= "C:/Users/WCS/Documents/UNREDD/Layers/"
+	trename = paste(folder,presuffix[i],"_", TLA,".grd",sep="")
+	losname = paste(folder,presuffix[i],"_", SLA,".grd",sep="")
+	writeRaster(tree,trename, overwrite=TRUE)
+	writeRaster(loss,losname, overwrite=TRUE)
+
+}
+
+
+
+
+############# EXECUTION ################
+
+# run function as loop
+for(i in 1:19)){
+Hansen(prov=presuffix[i]) # <-CHANGE ME
+}
+
