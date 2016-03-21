@@ -1,0 +1,247 @@
+
+---
+title: "West New Britain"
+author: "Nathan Whitmore"
+date: "November 17, 2015"
+output:  word_document
+
+
+---
+
+
+This is an R Markdown document documenting the outcome of a machine learning analysis. The goal of the code was to generate a predictive algorithm which revealed the underlining drivers of deforestation in each province. The prediction of areas of forest loss and unaffected areas occurred at the one hectare scale. The Hansen global forest cover layer and any degree of loss 2001-2014 within aggregated 1 ha plots was used as the metric of forest loss. For purposes of the analysis only areas with > 70% tree cover at the 1 ha scale were considered forests. Downsampling was used to increase the sensitivity of the algorithms to forest loss (the minority class) rather than the specificity of the unaffected class (the majority class).
+
+
+
+```{r echo=FALSE, results='hide',message=FALSE}
+
+library(raster)
+library(stringr)
+library(raster)
+library(rgdal)
+library(randomForest)
+library(caret)
+library(pROC)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(party)
+library(ncdf4)
+library(DMwR)
+library(earth)
+
+# get list of raster names from within folder
+mypath <- "C:/Users/WCS/Documents/UNREDD/Layers/"
+
+# suffix and zone
+presuffix <- c("NSL","CEN","SIM","ENB","EHY","ENG","ESK","GUL","MAD","MAN","MIL","MOR","NIR","ORO","SHY","WSK","WES","WHY","WNB")
+
+
+# pattern
+pattern=paste(paste(presuffix[19],".*\\.grd", sep=""))  # <-CHANGE ME
+
+# all grid files
+rasterfiles <-list.files(path=mypath, pattern=pattern)
+
+# my raster list
+my.rasters <- paste(mypath,rasterfiles, sep="")
+
+# masking
+forest <- raster(paste("C:/Users/WCS/Documents/UNREDD/Layers/",presuffix[19],"_tre.grd", sep=""))
+masky <- raster (paste("C:/Users/WCS/Documents/UNREDD/Layers/",presuffix[19],"_msk.grd", sep=""))
+newmask <- mask(forest,masky)
+newmask[newmask==0] <- NA
+
+
+# stack 'em
+my.stack <-stack(my.rasters, newmask)
+names(my.stack) <- c(str_sub(my.rasters,-7,-1), "Tree.mask")
+
+
+```
+
+Raw raster stack:
+
+```{r}
+	# stack plot
+plot(my.stack[[1:12]], maxnl=12)
+plot(my.stack[[13:length(my.rasters)]], maxnl=12)
+
+```
+
+Actual data layers
+
+```{r echo=FALSE, results='hide',message=FALSE}
+# change to dataframe for ggplot
+Datamap <- as.data.frame(rasterToPoints(my.stack))
+dim(Datamap)
+
+# use Tree.mask as mask
+Datamap <-Datamap[!is.na(Datamap$Tree.mask),]
+dim(Datamap)
+
+# remove crappy columns
+names(Datamap)
+
+UNREDDdata <- Datamap[,!names(Datamap) %in% c("x","y","tre.grd","mask.grd","Tree.mask","msk.grd")] 
+
+# replace NA with zeros or appropriate
+UNREDDdata$inu.grd[is.na(UNREDDdata$inu.grd)] <- 9
+UNREDDdata[is.na(UNREDDdata)] <- 0
+UNREDDdata$inu.grd <- as.factor(UNREDDdata$inu.grd)
+
+# mine threshold distance in meters
+threshold <- 100000
+mining.test <- ifelse(min(UNREDDdata$mdi.grd)<= threshold,1,0)
+UNREDDdata$mdi.grd <- UNREDDdata$mdi.grd*mining.test
+
+
+```
+
+
+Layers:
+```{r}
+names(UNREDDdata)
+
+```
+
+Unaffected vs Forest loss in hectares
+First by whole data set:
+```{r}
+table(UNREDDdata$los.grd)
+
+```
+
+```{r echo=FALSE, results='hide',message=FALSE}
+
+### Cross validation ######
+
+set.seed(1) # SEED = 1
+
+# don't train with NA
+
+# Hold one validation
+# training must be datafile 
+splitIndex <- createDataPartition(UNREDDdata$los.grd, p = .9, list = FALSE, times = 1)
+trainDF <- UNREDDdata[ splitIndex,]
+testDF <- UNREDDdata[ -splitIndex,]
+
+##### Downsampling ######
+
+retain <- trainDF[,!names(trainDF) %in% c("los.grd")] 
+resample<-downSample(x=retain,y=as.factor(trainDF$los.grd))
+```
+
+Unaffected vs Forest loss in training set & downsampled data for analysis:
+```{r}
+table(trainDF$los.grd)
+table(resample$Class)
+```
+
+Models considered:
+```{r}
+
+CrossROC <- list()
+
+CrossROC[[1]] <- randomForest(as.factor(Class) ~ .,  data=resample, 
+                              ntree=150, importance=T)
+CrossROC[[2]] <- rpart(as.factor(Class) ~ ., data=resample,
+                       control=rpart.control(minsplit = 2,maxdepth = 4, cp=0.001 ))
+                  
+options(digits=4)
+```
+
+```{r echo=FALSE, results='hide',message=FALSE}
+
+#### RANDOMFOREST - 
+# randomforest ROC
+predrf<-predict(CrossROC[[1]],testDF,n.trees=150,type="response")
+ROCrf<-roc(predrf,testDF$los.grd)
+ROCrf
+
+rfConfusion.Matrix <- table(testDF$los.grd,predrf)
+
+  # PLOT mean decrease in accuracy VARIABLE IMPORTANCE
+  varimp<-as.data.frame(varImpPlot(CrossROC[[1]]))
+  varimp$variable=rownames(varimp)
+  varimp$province = presuffix[19]
+  
+    write.csv(varimp, file = paste("C:\\Users\\WCS\\Documents\\UNREDD\\Final variable importance scores\\",presuffix[19],"_Varimp.csv",sep = ""), row.names=FALSE)
+  
+
+##### RPART
+# rpart ROC
+predrpart<-predict(CrossROC[[2]],testDF,type="class")
+ROCrpart<-roc(predrpart,testDF$los.grd)
+ROCrpart
+
+rpartConfusion.Matrix<- table(testDF$los.grd,predrpart)
+
+# create output
+# graphis random forest  
+
+Varimp.plot<- ggplot()+
+  geom_text(data=varimp, aes(y=MeanDecreaseAccuracy,x=MeanDecreaseGini,label =variable, colour=variable), size=4, vjust=1)+
+  geom_point(data=varimp, aes(y=MeanDecreaseAccuracy,x=MeanDecreaseGini, colour=variable), size=2)+
+	theme_bw()
+
+    
+# improved confusion matirx
+rpart.correct.unaffected <- 100* rpartConfusion.Matrix[1] /(rpartConfusion.Matrix[1]+  rpartConfusion.Matrix[3])
+rpart.correct.affected <- 100 *rpartConfusion.Matrix[4] /(rpartConfusion.Matrix[2]+  rpartConfusion.Matrix[4])
+
+rf.correct.unaffected <- 100* rfConfusion.Matrix[1] /(rfConfusion.Matrix[1]+  rfConfusion.Matrix[3])
+rf.correct.affected <- 100 *rfConfusion.Matrix[4] /(rfConfusion.Matrix[2]+  rfConfusion.Matrix[4])
+
+```
+
+**Results**
+___________________________________________________________
+Reciever Operator Characteristic (ROC) comparison:
+```{r}
+ROCrf
+ROCrpart
+```
+
+**Random forest**
+___________________________________________________________
+
+Confusion Matrix: Random forest
+```{r}
+rfConfusion.Matrix
+```
+
+Correct classification comparison: Random forest
+```{r}
+rf.correct.unaffected
+rf.correct.affected
+```
+
+Variable importance graphic: Random forest
+```{r}
+Varimp.plot
+```
+
+Partial regression plots (directionality): Random forest
+```{r}
+plotmo(CrossROC[[1]],all1=TRUE)
+```
+
+**Rpart**
+___________________________________________________________
+
+Confusion Matrix: Rpart
+```{r}
+rpartConfusion.Matrix
+```
+
+Correct classification comparison: Rpart
+```{r}
+rpart.correct.unaffected
+rpart.correct.affected 
+```
+
+Classification tree output: Random forest
+```{r}
+fancyRpartPlot(CrossROC[[2]])
+```
