@@ -1,0 +1,86 @@
+library(rgdal)
+library(rgeos)
+library(maptools)
+library(ggplot2)
+library(raster)
+library(ncdf4)
+
+# import Shapefile driver
+ogrDrivers()[10,]
+
+# makes list of shape files
+ file_root="C:\\Users\\WCS\\Documents\\UNREDD\\Coast PNG by province"
+
+# suffix and zone
+presuffix <- c("NSL","CEN","SIM","ENB","EHY","ENG","ESK","GUL","MAD","MAN","MIL","MOR","NIR","ORO","SHY","WSK","WES","WHY","WNB")
+ layername =paste(presuffix,"10km", sep="")
+
+# Three Letter Acronoym <- CHANGE ME
+TLA <- "10k"
+
+# checks
+lapply(layername, ogrListLayers)
+
+# suffix and zone
+# get list of raster names from within folder
+presuffix <- c("NSL","CEN","SIM","ENB","EHY","ENG","ESK","GUL","MAD","MAN","MIL","MOR","NIR","ORO","SHY","WSK","WES","WHY","WNB")
+
+# tester
+prov <-readOGR(file_root, layername[1])
+plot(prov)
+
+
+
+
+
+############### MASKING ############################
+
+## Function plus small loop
+
+RasterGeobook<- function (path,layer){
+prov <-readOGR(path, layer=layer)
+
+
+
+# Raster template (100 m spatial resolution) 
+
+Index.file <- paste("C:\\Users\\WCS\\Documents\\UNREDD\\Layers\\",presuffix[i],"_Index.txt", sep="")
+load(Index.file)
+r<- raster(extent(Index@extent))
+projection(r) <- Index@proj
+res(r) <- 100
+
+# rasterize 
+rp <- rasterize(prov, r) # <- CHANGE ME   #  could put this in but have removed it 
+
+
+
+##### reprojecting
+
+# Raster template (100 m spatial resolution) # makes it per ha
+Index.file <- paste("C:\\Users\\WCS\\Documents\\UNREDD\\Layers\\",presuffix[i],"_Index.txt", sep="")
+
+load(Index.file)
+Index
+r<- raster(extent(Index@extent))
+projection(r) <- Index@proj
+res(r) <- 100
+
+rast <- projectRaster(rp, r, projection(r), method="bilinear") 
+plot(rast)
+
+	
+# write raster using paste and substring
+	folder= "C:/Users/WCS/Documents/UNREDD/Layers/"
+	newname = paste(folder,presuffix[i],"_", TLA,".grd",sep="")
+	writeRaster(rast,newname, overwrite=TRUE)
+}
+
+
+# run function as loop
+for(i in c(1,2,4,7,8,9,10,11,12,13,14,16,17,19)){ # <- CHANGE ME
+
+RasterGeobook(file_root,layername[i]) # <-CHANGE ME
+}
+
+
