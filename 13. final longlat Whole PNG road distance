@@ -1,0 +1,99 @@
+library(rgdal)
+library(rgeos)
+library(maptools)
+library(ggplot2)
+library(raster)
+library(ncdf4)
+library(plotKML)
+
+# import Shapefile driver
+ogrDrivers()[10,]
+
+
+# three letter acronym
+TLA ="rod"
+
+# reading in singular layer for roads
+Roads <- readOGR("C:\\Users\\WCS\\Documents\\UNREDD\\Roads whole of PNG", "RoadMerge")
+
+# utm raster
+# Raster template (100 m spatial resolution) 
+# read in raster mask
+rp <- raster("C:/Users/WCS/Documents/UNREDD/Layers/PNG_longlat_vill.grd") 
+
+# new raster
+r <- raster(extent(rp))
+projection(r) <- projection(rp) 
+res(r) <-res(rp)
+
+# change to dataframe 
+road.data <- fortify(Roads)
+head(road.data)
+dim(road.data)
+
+# make spatial points
+xy <-road.data [,c(1:2)]
+sp<- SpatialPoints(coords = xy, proj4string = CRS("+proj=longlat"))
+
+# rasterise 
+WholePNGroad<- rasterize(sp, r)
+
+###### LOOP ####
+
+for (i in 1:19){
+# suffix and zone
+presuffix <- c("NSL","CEN","SIM","ENB","EHY","ENG","ESK","GUL","MAD","MAN","MIL","MOR","NIR","ORO","SHY","WSK","WES","WHY","WNB")
+
+# Raster template (100 m spatial resolution) # makes it per ha
+Index.file <- paste("C:\\Users\\WCS\\Documents\\UNREDD\\Layers\\",presuffix[i],"_Index.txt", sep="")
+
+load(Index.file)
+Index
+
+# widen extent by 10 km
+widen <- extent(Index@extent)
+
+widen@xmin <- widen@xmin -10000
+widen@xmax <- widen@xmax +10000
+widen@ymin <- widen@ymin - 10000
+widen@ymax <- widen@ymax + 10000
+
+r<- raster(extent(widen))
+projection(r) <- Index@proj
+res(r) <- 1000
+
+rast <- projectRaster(WholePNGroad, r, projection(Index@proj), method="bilinear") 
+plot(rast)
+
+# road distance
+road.distance <- distance(rast)
+plot(road.distance)
+
+# crop road distance
+# Index as safety
+
+x<- raster(extent(Index@extent))
+projection(x) <- Index@proj
+res(x) <- 100
+
+# cropping
+Prov <- crop(road.distance ,x)
+plot(Prov)
+
+##### reprojecting
+
+# Raster template (100 m spatial resolution) # makes it per ha
+
+r<- raster(extent(Index@extent))
+projection(r) <- Index@proj
+res(r) <- 100
+
+Prov.true <- projectRaster(Prov, r, projection(r), method="bilinear") 
+plot(Prov.true)
+
+# write raster using paste and substring
+	folder= "C:/Users/WCS/Documents/UNREDD/Layers/"
+	newname = paste(folder,presuffix[i],"_", TLA,".grd",sep="")
+	writeRaster(Prov.true,newname, overwrite=TRUE)
+}
+
