@@ -1,0 +1,42 @@
+
+library(gfcanalysis)
+library(raster)
+library(rgdal)
+library(rgeos)
+library(geosphere)
+library(sp)
+
+rm(list=ls())
+##
+
+aoi<- readOGR("C:\\Users\\WCS\\Documents\\UNREDD\\PNG Adm", "PNG_adm1")
+aoi$NAME_1 <- c("CEN","SIM","ENB","ESK","EHY","ENG","GUL","MAD","MAN","MIL","MOR","NIR","NSL","ORO","WSK","SHY","WNB","WHY","WES")
+presuffix <- c("CEN","SIM","ENB","ESK","EHY","ENG","GUL","MAD","MAN","MIL","MOR","NIR","NSL","ORO","WSK","SHY","WNB","WHY","WES")
+
+
+Hansen<- function (prov){
+prov = prov
+
+# aoi
+aoi <- aoi[aoi@data$NAME_1 == prov,]
+
+
+# stipulate forest threshold shown with 70% threshold as example
+output_folder <- "C:\\Users\\WCS\\Desktop\\70 percent forest" 
+
+gfc_extract <- extract_gfc(aoi, output_folder, filename=paste(presuffix[i],"_70p.tif",sep=""), overwrite=TRUE)
+gfc_thresholded <- threshold_gfc(gfc_extract, forest_threshold=70, 
+                                 filename=paste(presuffix[i],"_thres70.tif",sep=""), overwrite=TRUE) 
+
+
+# stats
+stats <- gfc_stats(aoi, gfc_thresholded)
+write.csv(stats, file= paste(presuffix[i],"_thres70.csv"))
+
+}
+
+# Run demonstrate Eastern Highlands
+for(i in 5:5){
+
+Hansen(prov=presuffix[i]) # <-CHANGE ME
+}
