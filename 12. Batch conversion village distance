@@ -1,0 +1,48 @@
+library(rgdal)
+library(raster)
+
+rm(list=ls())
+
+###########################
+
+
+wholePNG <-raster("C:/Users/WCS/Documents/UNREDD/Layers/PNG_longlat_vill.grd") 
+plot(wholePNG)
+
+# Three Letter Acronoym <- CHANGE ME
+TLA <- "vil"
+
+
+### cropping ######
+
+for (i in 1:19){
+
+# suffix and zone
+presuffix <- c("NSL","CEN","SIM","ENB","EHY","ENG","ESK","GUL","MAD","MAN","MIL","MOR","NIR","ORO","SHY","WSK","WES","WHY","WNB")
+zone <-       c(56,    55,   55,   56,    55,  55,  55,   55,    55,   55,   56,   55,  56,   55,   55,   54, 54,     55,    55)
+
+Index.file <- paste("C:\\Users\\WCS\\Documents\\UNREDD\\Layers\\",presuffix[i],"_Index.txt", sep="")
+
+load(Index.file)
+Index
+r<- raster(extent(Index@extent))
+projection(r) <- Index@proj
+res(r) <- 100
+
+# reproject index file to longlat
+Prov <- projectRaster(r, crs="+proj=longlat")
+
+# crop
+Prov<- crop(wholePNG ,Prov)
+plot(Prov)
+
+# reproject back to UTM
+projection = paste("+proj=utm +",zone[i]," +south", sep="")
+Provx <- projectRaster(from=Prov,to=r, crs=)
+plot(Provx)
+
+# write raster using paste and substring
+	folder= "C:/Users/WCS/Documents/UNREDD/Layers/"
+	newname = paste(folder,presuffix[i],"_", TLA,".grd",sep="")
+	writeRaster(Provx,newname, overwrite=TRUE)
+}
