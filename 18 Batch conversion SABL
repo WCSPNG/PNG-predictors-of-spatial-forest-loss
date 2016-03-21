@@ -1,0 +1,89 @@
+library(rgdal)
+library(ggplot2)
+library(raster)
+library(maptools)
+library(sp)
+library(ncdf4)
+
+rm(list=ls())
+
+# import MAPinfo
+ogrDrivers()[23,]
+
+# makes list of shape files
+ file_root="C:\\Users\\WCS\\Documents\\UNREDD\\SABL by Province"
+
+# presuffix 
+presuffix = c("CEN","ENB","GUL","MAD","NIR","ORO","WES","WNB")
+
+
+
+ogrListLayers("C:\\Users\\WCS\\Documents\\UNREDD\\SABL by Province")
+
+# tester
+a <-readOGR(file_root, layer="WES")
+
+# TLA
+TLA="SBL"
+
+plot(a)
+
+############### MASKING ############################
+
+## Function plus small loop
+
+RasterGeobook<- function (path,layer){
+prov <-readOGR(path, layer=layer)
+
+# UTM ZONE
+zone = c(       55,  56,    55,   55,    56,  55,   54, 55)
+
+# assign UTM projection to map grid
+crs <- paste("+proj=utm +zone=",zone[i]," +south", sep="")
+prov@proj4string<- CRS(crs)
+
+# transform CRS to UTM equal area
+prov <-spTransform(prov, CRS(crs))
+
+
+# Raster template (100 m spatial resolution) 
+
+Index.file <- paste("C:\\Users\\WCS\\Documents\\UNREDD\\Layers\\",presuffix[i],"_Index.txt", sep="")
+load(Index.file)
+r<- raster(extent(Index@extent))
+projection(r) <- Index@proj
+res(r) <- 100
+
+# rasterize 
+rp <- rasterize(prov, r) # <- CHANGE ME   #  could put this in but have removed it 
+
+
+
+##### reprojecting
+
+# Raster template (100 m spatial resolution) # makes it per ha
+Index.file <- paste("C:\\Users\\WCS\\Documents\\UNREDD\\Layers\\",presuffix[i],"_Index.txt", sep="")
+
+load(Index.file)
+Index
+r<- raster(extent(Index@extent))
+projection(r) <- Index@proj
+res(r) <- 100
+
+rast <- projectRaster(rp, r, projection(r), method="bilinear") 
+rast[rast >=1] <- 1
+plot(rast)
+
+	
+# write raster using paste and substring
+	folder= "C:/Users/WCS/Documents/UNREDD/Layers/"
+	newname = paste(folder,presuffix[i],"_", TLA,".grd",sep="")
+	writeRaster(rast,newname, overwrite=TRUE)
+}
+
+
+# run function as loop
+for(i in 1:length(presuffix)){ # <- CHANGE ME
+
+RasterGeobook(file_root,presuffix[i]) # <-CHANGE ME
+}
