@@ -15,7 +15,9 @@ http://azvoleff.com/articles/analyzing-forest-change-with-gfcanalysis/
 
 The code is separately by data layer. While we have made every attempt to make the code easily understandable idiosyncrasies
 in PNGRIS and GEOBOOK mean that for some provinces data is split and batch processing won't work but rather has to be undertaken 
-manually. 
+manually. All the code files bearing numbers are used for the construction of the GIS data layers which are finally drawn together in the "Final analysis Markdown" file.
+
+The consequences of altering the threshold for canopy cover can is demonstrated in the "gfcanalysis 70 percent province loss gain" file.
 
 Please notify me of any issues you identify in the code.
 
