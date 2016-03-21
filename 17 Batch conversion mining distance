@@ -1,0 +1,90 @@
+library(rgdal)
+library(raster)
+
+rm(list=ls())
+
+###########################
+
+# get list of raster names from within folder
+
+
+
+TLA = "mdi"
+
+##########################
+
+
+# read csv
+mines <- read.csv("C:/Users/WCS/Documents/UNREDD/Mineral Extraction simple PNG.csv")
+mines <- mines[-13,]
+
+# plotting
+plot(Lat~Long , data=mines)
+
+# make spatial points
+xy <-mines[,c(2:3)]
+sp<- SpatialPoints(coords = xy, proj4string = CRS("+proj=longlat"))
+
+
+
+# utm raster
+# Raster template (100 m spatial resolution) 
+# read in raster mask
+rp <- raster("C:/Users/WCS/Documents/UNREDD/Layers/PNG_longlat_vill.grd") 
+
+# new raster
+r <- raster(extent(rp))
+projection(r) <- projection(rp) 
+res(r) <-res(rp)
+
+rp
+r
+
+# rasterise 
+rast<- rasterize(sp, r)
+
+plot(rast)
+
+
+# work out distances
+minedist <- distance(rast)
+
+plot(minedist)
+
+writeRaster(minedist,("C:/Users/WCS/Documents/UNREDD/Layers/PNG_longlat_minedist"), overwrite=TRUE) 
+
+### cropping ######
+
+MinePNG <- raster("C:/Users/WCS/Documents/UNREDD/Layers/PNG_longlat_minedist.grd")
+
+for (i in 1:19){
+
+# suffix and zone
+presuffix <- c("NSL","CEN","SIM","ENB","EHY","ENG","ESK","GUL","MAD","MAN","MIL","MOR","NIR","ORO","SHY","WSK","WES","WHY","WNB")
+zone <-       c(56,    55,   55,   56,    55,  54,  54,   55,    55,   55,   56,   55,  56,   55,   54,   54, 54,     55,    55)
+
+Index.file <- paste("C:\\Users\\WCS\\Documents\\UNREDD\\Layers\\",presuffix[i],"_Index.txt", sep="")
+
+load(Index.file)
+Index
+r<- raster(extent(Index@extent))
+projection(r) <- Index@proj
+res(r) <- 100
+
+# reproject index file to longlat
+Prov <- projectRaster(r, crs="+proj=longlat")
+
+# crop
+Prov<- crop(MinePNG ,Prov)
+plot(Prov)
+
+# reproject back to UTM
+projection = paste("+proj=utm +",zone[i]," +south", sep="")
+Provx <- projectRaster(from=Prov,to=r, crs= projection)
+plot(Provx)
+
+# write raster using paste and substring
+	folder= "C:/Users/WCS/Documents/UNREDD/Layers/"
+	newname = paste(folder,presuffix[i],"_", TLA,".grd",sep="")
+	writeRaster(Provx,newname, overwrite=TRUE)
+}
